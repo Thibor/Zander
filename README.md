@@ -1,7 +1,7 @@
 # Zander
 
 <div align="center" style="padding-top: 50px">
-<img src="/Resources/Zander.png" />
+<img src="/Resources/Zander.jpg" />
     <br>
     <br>
     <b><i>Small uci chess engine 2900 elo.</i></b>
