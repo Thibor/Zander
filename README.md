@@ -20,7 +20,7 @@
 - [x] Quiescence search<br>
 - [x] Transposition table<br>
 - [x] Bitboard<br>
-- [ ] Mate distance pruning<br>
-- [ ] Null move pruning<br>
-- [ ] Futility pruning<br>
-- [ ] Razoring<br>
+- [x] Mate distance pruning<br>
+- [x] Null move pruning<br>
+- [x] Futility pruning<br>
+- [x] Razoring<br>
