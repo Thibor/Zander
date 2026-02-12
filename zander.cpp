@@ -365,7 +365,7 @@ struct SearchInfo {
 __declspec(align(64)) GBoard Board[1];
 U64 Stack[2048];
 int sp;
-U64 nodes, check_node;
+U64 check_node;
 
 typedef struct {
 	U64 attacks[64];
@@ -1402,7 +1402,7 @@ finish:
 	Next->move = move;
 	Next->gen_flags = 0;
 	Current++;
-	nodes++;
+	info.nodes++;
 }
 
 void undo_move(int move) {
@@ -1500,7 +1500,7 @@ inline void do_null() {
 	sp++;
 	Stack[sp] = Next->key;
 	Current++;
-	nodes++;
+	info.nodes++;
 }
 
 inline void undo_null() {
@@ -3987,8 +3987,8 @@ int q_evasion(int beta, int depth, int flags) {
 int search(int beta, int depth, int flags) {
 	int i, cnt, move, check, ext, me, hash_move, static_value, prune, singular, hash_depth, hash_value = -MateValue, value, new_depth, * p, curr_value;
 	U64 target;
-	if (nodes > check_node + 16384) {
-		check_node = nodes;
+	if (info.nodes > check_node + 16384) {
+		check_node = info.nodes;
 		check_time(1);
 	}
 	if (flags & FlagHaltCheck) {
@@ -4676,7 +4676,7 @@ void root() {
 	int i, time, depth, value, previous = -MateValue, alpha, beta, delta;
 
 	date++;
-	nodes = check_node = 0;
+	check_node = 0;
 	memcpy(Data, Current, sizeof(GData));
 	memcpy(SaveData, Current, sizeof(GData));
 	memcpy(SaveBoard, Board, sizeof(GBoard));
@@ -4927,12 +4927,12 @@ void send_pv(int depth, int alpha, int beta, int score) {
 		score_string[3] = 0;
 	}
 	nps = GetTickCount64() - info.timeStart;
-	if (nps) nps = (nodes * 1000) / nps;
+	if (nps) nps = (info.nodes * 1000) / nps;
 	if (score < beta) {
-		if (score <= alpha) fprintf(stdout, "info depth %d seldepth %d score %s%d upperbound nodes %I64d nps %I64d pv %s\n", depth, sel_depth, score_string, score, nodes, nps, pv_string);
-		else fprintf(stdout, "info depth %d seldepth %d score %s%d nodes %I64d nps %I64d pv %s\n", depth, sel_depth, score_string, score, nodes, nps, pv_string);
+		if (score <= alpha) fprintf(stdout, "info depth %d seldepth %d score %s%d upperbound nodes %I64d nps %I64d pv %s\n", depth, sel_depth, score_string, score, info.nodes, nps, pv_string);
+		else fprintf(stdout, "info depth %d seldepth %d score %s%d nodes %I64d nps %I64d pv %s\n", depth, sel_depth, score_string, score, info.nodes, nps, pv_string);
 	}
-	else fprintf(stdout, "info depth %d seldepth %d score %s%d lowerbound nodes %I64d nps %I64d pv %s\n", depth, sel_depth, score_string, score, nodes, nps, pv_string);
+	else fprintf(stdout, "info depth %d seldepth %d score %s%d lowerbound nodes %I64d nps %I64d pv %s\n", depth, sel_depth, score_string, score, info.nodes, nps, pv_string);
 	fflush(stdout);
 }
 
@@ -4989,8 +4989,8 @@ void send_multipv(int depth, int curr_number) {
 			score_string[3] = 0;
 		}
 		nps = GetTickCount64() - info.timeStart;
-		if (nps) nps = (nodes * 1000) / nps;
-		fprintf(stdout, "info multipv %d depth %d score %s%d nodes %I64d nps %I64d pv %s\n", j + 1, (j <= curr_number ? depth : depth - 1), score_string, score, nodes, nps, pv_string);
+		if (nps) nps = (info.nodes * 1000) / nps;
+		fprintf(stdout, "info multipv %d depth %d score %s%d nodes %I64d nps %I64d pv %s\n", j + 1, (j <= curr_number ? depth : depth - 1), score_string, score, info.nodes, nps, pv_string);
 		fflush(stdout);
 	}
 }
@@ -5000,7 +5000,7 @@ void send_best_move() {
 #ifndef KNS_TESTING
 	if (!info.post) return;
 #endif
-	fprintf(stdout, "info nodes %I64d score cp %d\n", nodes, best_score);
+	fprintf(stdout, "info nodes %I64d score cp %d\n", info.nodes, best_score);
 	if (!best_move) return;
 	Current = Data;
 	do_move(best_move);
@@ -5263,10 +5263,10 @@ void UciBench() {
 		++depth;
 		DepthLimit = 16 + 2 * depth + 1;
 		root();
-		elapsed = (U64)GetTickCount() - info.timeStart;
-		printf(" %2d. %8llu %12llu\n", depth, elapsed, nodes);
+		elapsed = GetTickCount64() - info.timeStart;
+		printf(" %2d. %8llu %12llu\n", depth, elapsed, info.nodes);
 	}
-	PrintSummary(elapsed, nodes);
+	PrintSummary(elapsed,info.nodes);
 }
 
 void uci() {
