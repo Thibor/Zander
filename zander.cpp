@@ -1,6 +1,3 @@
-#include "intrin.h"
-#include "setjmp.h"
-#include "stdio.h"
 #include <iostream>
 
 #if defined(_WIN32) || defined(_WIN64)
