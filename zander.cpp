@@ -306,9 +306,6 @@ const int KingAttackScale[16] = { 0, 1, 4, 9, 16, 25, 36, 49, 64, 64, 64, 64, 64
 const int ThreatScale[9] = { 0, Compose(20,30), Compose(160,240), Compose(480,720), Compose(480,720), // tuned, though the values are ridiculous...
 	Compose(480,720), Compose(480,720), Compose(480,720), Compose(480,720) };
 const int AdvantageScale[16] = { 16, 15, 14, 12, 9, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }; // tuned
-#ifdef TUNABLE
-const int SpaceScore[16] = { 0, 0, 5, 15, 30, 50, 70, 100, 130, 160, 190, 220, 250, 280, 310, 340 };
-#endif
 const int SEEValue[16] = { 0, 0, 1, 1, 3, 3, 3, 3, 3, 3, 5, 5, 10, 10, 1000, 1000 };
 const int BishopPair[9] = { 70, 65, 60, 55, 50, 45, 40, 35, 30 }; // hardly tuned
 
@@ -561,10 +558,6 @@ void hash_high(int value, int depth);
 void hash_low(int move, int value, int depth);
 void hash_high_pv(int value, int depth);
 void hash_low_pv(int move, int value, int depth);
-#ifdef TUNABLE
-void hash_high_forced(int value);
-void hash_low_forced(int value);
-#endif
 void hash_exact(int move, int value, int depth);
 inline int extension(int move, int pv);
 inline int is_check(int move);
@@ -587,10 +580,6 @@ void ParseGo(char string[]);
 void check_time(int searching);
 void init_search();
 int input();
-void UciBench(char string[]);
-#ifdef EPD_TESTING
-void epd(char string[]);
-#endif
 void uci();
 
 static void ResetInfo() {
@@ -623,7 +612,7 @@ inline int popcnt(U64 x) {
 }
 
 int popcount(U64 x) {
-	return __popcnt64(x);
+	return (int)__popcnt64(x);
 }
 
 U64 BMagicHash(int i, U64 occ) {
@@ -869,8 +858,8 @@ void init_keys() {
 void init_material() {
 	int wp, bp, wn, bn, wl, bl, wd, bd, wr, br, wq, bq, index, score, phase, wb, bb;
 	int w_maj, b_maj, w_maj_score, b_maj_score, w_min, b_min, w_tot_score, b_tot_score, wmul, bmul;
-	for (index = 0; index < TotalMat; index++) Material[index] = 0xFFFFFFFF;
-
+	for (index = 0; index < TotalMat; index++)
+		Material[index] = 0xFFFFFFFF;
 	for (wq = 0; wq < 3; wq++)
 		for (bq = 0; bq < 3; bq++)
 			for (wr = 0; wr < 3; wr++)
@@ -4479,29 +4468,8 @@ int pv_search(int alpha, int beta, int depth) {
 	if ((Current - Data) - MateValue > alpha) alpha = Convert(Current - Data, int) - MateValue;
 	Current->killer[0] = hash_move = 0;
 	hash_depth = 0;
-#ifdef TUNABLE
-	for (i = 0, Entry = Hash + (High32(Current->key) & hash_mask); i < 4; i++, Entry++) {
-		if (Low32(Current->key) == Entry->key) {
-			if (Entry->low_depth == 127) {
-				alpha = Max(alpha, Entry->low);
-				if (alpha >= beta) return beta;
-			}
-			else if (Entry->high_depth == 127) {
-				beta = Min(beta, Entry->high);
-				if (alpha >= beta) return alpha;
-			}
-		}
-	}
-#endif
-#ifndef KNS_TESTING
-#ifndef TUNABLE
+
 	if (False(Infinite) || depth <= 24) {
-#else
-	if (False(Infinite) || depth <= 24 || True(PVHashing)) {
-#endif
-#else
-	if (1) {
-#endif
 		for (i = 0, PVEntry = PVHash + (High32(Current->key) & pv_hash_mask); i < pv_cluster_size; i++, PVEntry++) {
 			if (PVEntry->key == Low32(Current->key)) {
 				PVEntry->date = date;
@@ -4996,18 +4964,13 @@ void send_multipv(int depth, int curr_number) {
 }
 
 void send_best_move() {
-	int ponder;
-#ifndef KNS_TESTING
-	if (!info.post) return;
-#endif
-	fprintf(stdout, "info nodes %I64d score cp %d\n", info.nodes, best_score);
-	if (!best_move) return;
+	if (!best_move|| !info.post) return;
 	Current = Data;
 	do_move(best_move);
 	pv_length = 1;
 	pvp = 0;
 	pick_pv();
-	ponder = PV[0];
+	int ponder = PV[0];
 	if (True(ponder) && False(is_legal(ponder))) ponder = 0;
 	undo_move(best_move);
 	move_to_string(best_move, pv_string);
@@ -5243,13 +5206,13 @@ static void PrintSummary(U64 time, U64 nodes) {
 	printf("-----------------------------\n");
 }
 
-void PrintPerformanceHeader() {
+static void PrintPerformanceHeader() {
 	printf("-----------------------------\n");
 	printf("ply      time        nodes\n");
 	printf("-----------------------------\n");
 }
 
-void UciBench() {
+static void UciBench() {
 	ResetInfo();
 	PrintPerformanceHeader();
 	int depth = 0;
@@ -5344,24 +5307,20 @@ void uci() {
 void main() {
 	cout << NAME << " " << VERSION << endl;
 	DWORD p;
-
 	StreamHandle = GetStdHandle(STD_INPUT_HANDLE);
 	Console = GetConsoleMode(StreamHandle, &p);
 	if (Console) {
 		SetConsoleMode(StreamHandle, p & (~(ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT)));
 		FlushConsoleInputBuffer(StreamHandle);
 	}
-
 	date = 1;
 	Ponder = 0;
 	init_hash(32);
 	memset(Data, 0, 128 * sizeof(GData));
 	init();
-
 	init_keys();
 	init_material();
 	init_search();
-
 	setbuf(stdout, NULL);
 	setbuf(stdin, NULL);
 	setvbuf(stdout, NULL, _IONBF, 0);
